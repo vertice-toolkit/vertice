@@ -1,0 +1,48 @@
+# Build
+build/
+cmake-build*/
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj*
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.tlog
+*.log
+*.ipch
+*.iobj
+*.ipdb
+Debug/
+Release/
+x64/
+x86/
+Win32/
+
+# .NET
+bin/
+obj/
+*.exe
+*.dll
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Compiled
+*.o
+*.obj
+*.lib
+*.exp
+*.pdb
+*.ilk
