@@ -1,4 +1,5 @@
 #pragma once
+#include "core.h"
 #include <cstdint>
 #include <functional>
 #include <MinHook.h>
@@ -202,14 +203,12 @@ struct Network {
 
 template<typename T>
 struct Singleton {
-    static T* get() {
-        // Assumes static Instance field on class
-        Il2CppClass* klass = IL2CPP::find_class("", #T);
+    static T* get(const char* class_name) {
+        Il2CppClass* klass = IL2CPP::find_class("", class_name);
         if (!klass) return nullptr;
         
         FieldInfo* field = IL2CPP::find_field(klass, "Instance");
         if (!field) {
-            // Try backing field name
             char buf[128];
             sprintf_s(buf, "<Instance>k__BackingField");
             field = IL2CPP::find_field(klass, buf);
@@ -221,8 +220,8 @@ struct Singleton {
         return instance;
     }
     
-    static T* get_local() {
-        Il2CppClass* klass = IL2CPP::find_class("", #T);
+    static T* get_local(const char* class_name) {
+        Il2CppClass* klass = IL2CPP::find_class("", class_name);
         if (!klass) return nullptr;
         
         FieldInfo* field = IL2CPP::find_field(klass, "LocalInstance");
@@ -245,10 +244,10 @@ struct Singleton {
 
 struct Objects {
     template<typename T>
-    static std::vector<T*> find_all() {
+    static std::vector<T*> find_all(const char* class_name) {
         std::vector<T*> result;
         
-        Il2CppClass* target_class = IL2CPP::find_class("", #T);
+        Il2CppClass* target_class = IL2CPP::find_class("", class_name);
         if (!target_class) return result;
         
         Il2CppClass* obj_class = IL2CPP::find_class("UnityEngine", "Object");

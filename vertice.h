@@ -76,10 +76,10 @@
 
 // Get singleton instance
 #define GET_SINGLETON(type) \
-    vertice::Singleton<type>::get()
+    vertice::Singleton<type>::get(#type)
 
 #define GET_LOCAL(type) \
-    vertice::Singleton<type>::get_local()
+    vertice::Singleton<type>::get_local(#type)
 
 // Find all objects of type
 #define FIND_ALL(type) \

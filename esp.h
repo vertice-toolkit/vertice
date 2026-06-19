@@ -1,4 +1,5 @@
 #pragma once
+#include "core.h"
 #include <vector>
 #include <imgui.h>
 
@@ -61,7 +62,7 @@ struct ESP {
         __try { arr = *(void**)((uintptr_t)list + 0x10); } __except (EXCEPTION_EXECUTE_HANDLER) { return result; }
         if (!arr) return result;
         
-        auto local_pmm = Singleton<PlayerModeManager>::get_local();
+        auto local_pmm = Singleton<PlayerModeManager>::get_local("PlayerModeManager");
         
         for (int i = 0; i < size; i++) {
             void* pmm = nullptr;

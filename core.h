@@ -10,12 +10,23 @@
 
 struct Il2CppClass;
 struct MethodInfo;
-struct FieldInfo;
+struct FieldInfo {
+    const char* name;
+    void* type;
+    Il2CppClass* parent;
+    int32_t offset;
+    uint8_t flags;
+};
 struct Il2CppObject;
 struct Il2CppString;
 struct Il2CppException;
 struct Il2CppAssembly;
 struct Il2CppImage;
+struct Il2CppField;
+struct Il2CppDateTime;
+struct Il2CppDomain;
+struct Il2CppThread;
+struct Il2CppAssemblyName;
 typedef wchar_t Il2CppChar;
 
 namespace vertice {
