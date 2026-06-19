@@ -27,7 +27,7 @@ typedef const char* (*il2cpp_class_get_namespace_t)(Il2CppClass* klass);
 typedef Il2CppClass* (*il2cpp_class_get_parent_t)(Il2CppClass* klass);
 typedef int (*il2cpp_class_get_flags_t)(Il2CppClass* klass);
 typedef bool (*il2cpp_class_is_enum_t)(Il2CppClass* klass);
-typedef Il2CppField* (*il2cpp_class_get_fields_t)(Il2CppClass* klass, void** iter);
+typedef FieldInfo* (*il2cpp_class_get_fields_t)(Il2CppClass* klass, void** iter);
 typedef FieldInfo* (*il2cpp_class_get_field_t)(Il2CppClass* klass, const char* name);
 typedef MethodInfo* (*il2cpp_class_get_methods_t)(Il2CppClass* klass, void** iter);
 typedef MethodInfo* (*il2cpp_class_get_method_from_name_t)(Il2CppClass* klass, const char* name, int argsCount);
@@ -311,7 +311,7 @@ bool Core::field_is_static(FieldInfo* field) {
 
 FieldInfo* Core::get_class_next_field(Il2CppClass* klass, void** iter) {
     if (!f_class_get_fields || !klass || !iter) return nullptr;
-    return (FieldInfo*)f_class_get_fields(klass, iter);
+    return f_class_get_fields(klass, iter);
 }
 
 MethodInfo* Core::get_class_next_method(Il2CppClass* klass, void** iter) {

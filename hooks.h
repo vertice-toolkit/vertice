@@ -6,6 +6,8 @@
 
 namespace vertice {
 
+using Core::Vec3;
+
 // ===
 // MinHook Wrapper
 // ===
