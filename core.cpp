@@ -8,6 +8,8 @@
 #include <Windows.h>
 #endif
 
+#define FIELD_ATTRIBUTE_STATIC 0x10
+
 namespace vertice {
 
 bool Core::initialized = false;
@@ -68,6 +70,8 @@ typedef void (*il2cpp_thread_detach_t)(Il2CppThread* thread);
 
 typedef Il2CppDomain* (*il2cpp_domain_get_t)();
 typedef Il2CppAssemblyName* (*il2cpp_domain_get_assemblies_t)(size_t* size);
+typedef int (*il2cpp_image_get_class_count_t)(Il2CppImage*);
+typedef Il2CppClass* (*il2cpp_image_get_class_t)(Il2CppImage*, int);
 
 // Global function pointers
 static il2cpp_class_from_name_t f_class_from_name = nullptr;
@@ -86,6 +90,8 @@ static il2cpp_assembly_get_image_t f_assembly_get_image = nullptr;
 static il2cpp_domain_get_t f_domain_get = nullptr;
 static il2cpp_domain_get_assemblies_t f_domain_get_assemblies = nullptr;
 static il2cpp_thread_attach_t f_thread_attach = nullptr;
+static il2cpp_image_get_class_count_t f_image_get_class_count = nullptr;
+static il2cpp_image_get_class_t f_image_get_class = nullptr;
 
 // ===
 // Helper Functions
@@ -127,6 +133,8 @@ static bool scan_for_il2cpp() {
         { "il2cpp_domain_get_assemblies",       (void**)&f_domain_get_assemblies },
         { "il2cpp_thread_attach",               (void**)&f_thread_attach },
         { "il2cpp_value_box",                   (void**)&f_value_box },
+        { "il2cpp_image_get_class_count",       (void**)&f_image_get_class_count },
+        { "il2cpp_image_get_class",             (void**)&f_image_get_class },
     };
 
     int resolved = 0;
@@ -259,6 +267,56 @@ void* Core::get_static_field_ptr(const char* namespaze, const char* klass, const
     
     // Static fields are at negative offsets from class
     return (void*)((uintptr_t)k - off);
+}
+
+int Core::get_assembly_count() {
+    if (!f_domain_get || !f_domain_get_assemblies) return 0;
+    Il2CppDomain* domain = f_domain_get();
+    if (!domain) return 0;
+    size_t count = 0;
+    f_domain_get_assemblies(&count);
+    return (int)count;
+}
+
+Il2CppImage* Core::get_assembly_image(int index) {
+    if (!f_domain_get || !f_domain_get_assemblies || index < 0) return nullptr;
+    Il2CppDomain* domain = f_domain_get();
+    if (!domain) return nullptr;
+    size_t count = 0;
+    auto assemblies = (Il2CppAssembly**)f_domain_get_assemblies(&count);
+    if (!assemblies || (size_t)index >= count) return nullptr;
+    if (!f_assembly_get_image) return nullptr;
+    return (Il2CppImage*)f_assembly_get_image(assemblies[index]);
+}
+
+int Core::get_image_class_count(Il2CppImage* img) {
+    if (!f_image_get_class_count || !img) return 0;
+    return f_image_get_class_count(img);
+}
+
+Il2CppClass* Core::get_image_class(Il2CppImage* img, int index) {
+    if (!f_image_get_class || !img || index < 0) return nullptr;
+    return f_image_get_class(img, index);
+}
+
+void* Core::read_field_raw(Il2CppObject* obj, int32_t offset) {
+    if (!obj || offset < 0) return nullptr;
+    return (void*)((uintptr_t)obj + offset);
+}
+
+bool Core::field_is_static(FieldInfo* field) {
+    if (!field) return false;
+    return (field->flags & FIELD_ATTRIBUTE_STATIC) != 0;
+}
+
+FieldInfo* Core::get_class_next_field(Il2CppClass* klass, void** iter) {
+    if (!f_class_get_fields || !klass || !iter) return nullptr;
+    return (FieldInfo*)f_class_get_fields(klass, iter);
+}
+
+MethodInfo* Core::get_class_next_method(Il2CppClass* klass, void** iter) {
+    if (!f_class_get_methods || !klass || !iter) return nullptr;
+    return f_class_get_methods(klass, iter);
 }
 
 Il2CppString* Core::string_new(const char* str) {

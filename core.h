@@ -49,6 +49,22 @@ struct Core {
     static void* get_static_field_ptr(const char* namespaze, const char* klass, const char* field);
     static void field_static_get_value(FieldInfo* field, void* value);
 
+    // Assembly / Image enumeration
+    static int get_assembly_count();
+    static Il2CppImage* get_assembly_image(int index);
+
+    // Class enumeration
+    static int get_image_class_count(Il2CppImage* img);
+    static Il2CppClass* get_image_class(Il2CppImage* img, int index);
+
+    // Field / Method enumeration (iterator pattern: call with iter=nullptr first, then reuse)
+    static FieldInfo* get_class_next_field(Il2CppClass* klass, void** iter);
+    static MethodInfo* get_class_next_method(Il2CppClass* klass, void** iter);
+
+    // Field introspection
+    static void* read_field_raw(Il2CppObject* obj, int32_t offset);
+    static bool field_is_static(FieldInfo* field);
+
     // String operations
     static Il2CppString* string_new(const char* str);
     static Il2CppChar* string_get_chars(Il2CppString* str);
