@@ -24,8 +24,6 @@
 
 #include "core.h"
 #include "hooks.h"
-#include "esp.h"
-#include "example.h"
 
 // ===
 // Shortcut Macros for Easy Feature Definition

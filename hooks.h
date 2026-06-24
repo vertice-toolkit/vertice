@@ -92,11 +92,7 @@ struct FeatureManager {
     
     static void update() {
         for (auto& fn : updates) {
-            __try {
-                fn();
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                printf("[Feature] Exception in update\n");
-            }
+            fn();
         }
     }
     
@@ -143,10 +139,10 @@ struct Network {
             if (strcmp(cache[i].key, key) == 0) return cache[i].ptr;
         }
         
-        void* ptr = IL2CPP::find_method_ptr(namespaze, klass, method, args);
+        void* ptr = vertice::Core::find_method_ptr(namespaze, klass, method, args);
         if (!ptr) {
             // Try with -1 args (wildcard)
-            ptr = IL2CPP::find_method_ptr(namespaze, klass, method, -1);
+            ptr = vertice::Core::find_method_ptr(namespaze, klass, method, -1);
         }
         
         if (ptr && cache_count < 32) {
@@ -170,31 +166,27 @@ struct Network {
             return;
         }
         
-        __try {
-            switch (args) {
-                case 0: {
-                    using Fn = void(*)(void*);
-                    ((Fn)ptr)(instance);
-                    break;
-                }
-                case 1: {
-                    using Fn = void(*)(void*, void*);
-                    ((Fn)ptr)(instance, params[0]);
-                    break;
-                }
-                case 2: {
-                    using Fn = void(*)(void*, void*, void*);
-                    ((Fn)ptr)(instance, params[0], params[1]);
-                    break;
-                }
-                case 3: {
-                    using Fn = void(*)(void*, void*, void*, void*);
-                    ((Fn)ptr)(instance, params[0], params[1], params[2]);
-                    break;
-                }
+        switch (args) {
+            case 0: {
+                using Fn = void(*)(void*);
+                ((Fn)ptr)(instance);
+                break;
             }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            printf("[Network] Exception calling %s.%s\n", klass, method);
+            case 1: {
+                using Fn = void(*)(void*, void*);
+                ((Fn)ptr)(instance, params[0]);
+                break;
+            }
+            case 2: {
+                using Fn = void(*)(void*, void*, void*);
+                ((Fn)ptr)(instance, params[0], params[1]);
+                break;
+            }
+            case 3: {
+                using Fn = void(*)(void*, void*, void*, void*);
+                ((Fn)ptr)(instance, params[0], params[1], params[2]);
+                break;
+            }
         }
     }
 };
@@ -206,36 +198,36 @@ struct Network {
 template<typename T>
 struct Singleton {
     static T* get(const char* class_name) {
-        Il2CppClass* klass = IL2CPP::find_class("", class_name);
+        Il2CppClass* klass = vertice::Core::find_class("", class_name);
         if (!klass) return nullptr;
         
-        FieldInfo* field = IL2CPP::find_field(klass, "Instance");
+        FieldInfo* field = vertice::Core::find_field(klass, "Instance");
         if (!field) {
             char buf[128];
             sprintf_s(buf, "<Instance>k__BackingField");
-            field = IL2CPP::find_field(klass, buf);
+            field = vertice::Core::find_field(klass, buf);
         }
         if (!field) return nullptr;
         
         T* instance = nullptr;
-        IL2CPP::field_static_get_value(field, &instance);
+        vertice::Core::field_static_get_value(field, &instance);
         return instance;
     }
     
     static T* get_local(const char* class_name) {
-        Il2CppClass* klass = IL2CPP::find_class("", class_name);
+        Il2CppClass* klass = vertice::Core::find_class("", class_name);
         if (!klass) return nullptr;
         
-        FieldInfo* field = IL2CPP::find_field(klass, "LocalInstance");
+        FieldInfo* field = vertice::Core::find_field(klass, "LocalInstance");
         if (!field) {
             char buf[128];
             sprintf_s(buf, "<LocalInstance>k__BackingField");
-            field = IL2CPP::find_field(klass, buf);
+            field = vertice::Core::find_field(klass, buf);
         }
         if (!field) return nullptr;
         
         T* instance = nullptr;
-        IL2CPP::field_static_get_value(field, &instance);
+        vertice::Core::field_static_get_value(field, &instance);
         return instance;
     }
 };
@@ -249,28 +241,28 @@ struct Objects {
     static std::vector<T*> find_all(const char* class_name) {
         std::vector<T*> result;
         
-        Il2CppClass* target_class = IL2CPP::find_class("", class_name);
+        Il2CppClass* target_class = vertice::Core::find_class("", class_name);
         if (!target_class) return result;
         
-        Il2CppClass* obj_class = IL2CPP::find_class("UnityEngine", "Object");
+        Il2CppClass* obj_class = vertice::Core::find_class("UnityEngine", "Object");
         if (!obj_class) return result;
         
-        MethodInfo* find_method = IL2CPP::find_method(obj_class, "FindObjectsOfType", 1);
-        if (!find_method) find_method = IL2CPP::find_method(obj_class, "FindObjectsOfType", 0);
+        MethodInfo* find_method = vertice::Core::find_method(obj_class, "FindObjectsOfType", 1);
+        if (!find_method) find_method = vertice::Core::find_method(obj_class, "FindObjectsOfType", 0);
         if (!find_method) return result;
         
         void* type_params[] = { &target_class };
         Il2CppException* exc = nullptr;
-        Il2CppObject* arr = IL2CPP::runtime_invoke(find_method, nullptr, type_params, &exc);
+        Il2CppObject* arr = vertice::Core::runtime_invoke(find_method, nullptr, type_params, &exc);
         if (exc || !arr) return result;
         
         int count = 0;
-        __try { count = *(int*)((uintptr_t)arr + 0x18); } __except (EXCEPTION_EXECUTE_HANDLER) { return result; }
+        count = *(int*)((uintptr_t)arr + 0x18);
         if (count > 200) count = 200;
         
         for (int i = 0; i < count; i++) {
             T* obj = nullptr;
-            __try { obj = *(T**)((uintptr_t)arr + 0x20 + i * 8); } __except (EXCEPTION_EXECUTE_HANDLER) { break; }
+            obj = *(T**)((uintptr_t)arr + 0x20 + i * 8);
             if (obj) result.push_back(obj);
         }
         
@@ -284,7 +276,7 @@ struct Objects {
         float nearest_dist = max_dist;
         
         for (auto obj : all) {
-            Vec3 pos = IL2CPP::get_position(obj);
+            Vec3 pos = vertice::Core::get_position(obj);
             float dist = from.distance(pos);
             if (dist < nearest_dist) {
                 nearest_dist = dist;

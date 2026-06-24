@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cmath>
 #include <string>
 #include <vector>
 #include <functional>
@@ -18,7 +19,6 @@ enum class Runtime : uint8_t { Unknown, IL2CPP, Mono };
 // IL2CPP Forward Declarations
 // ===
 struct Il2CppClass;
-struct MethodInfo;
 struct FieldInfo {
     const char* name;
     void* type;
@@ -30,12 +30,34 @@ struct Il2CppObject;
 struct Il2CppString;
 struct Il2CppException;
 struct Il2CppAssembly;
-struct Il2CppImage;
+struct Il2CppDomain;
+struct Il2CppImage {
+    const char* name;
+    void* assembly;
+    int typeStart;
+    int typeCount;
+    int exportedTypeStart;
+    int exportedTypeCount;
+    int customAttributeStart;
+    int customAttributeCount;
+};
 struct Il2CppField;
 struct Il2CppDateTime;
 struct Il2CppThread;
 struct Il2CppAssemblyName;
 typedef wchar_t Il2CppChar;
+
+// MethodInfo needs methodPointer at offset 0
+struct MethodInfo {
+    void* methodPointer;
+    void* invoker_method;
+    const char* name;
+    Il2CppClass* klass;
+    const void* return_type;
+    const void* parameters;
+    int parameters_count;
+    // ... more fields
+};
 
 // ===
 // Mono Forward Declarations (opaque — all access via getter functions)
@@ -132,42 +154,28 @@ struct Core {
     template<typename T>
     static T read_field(Il2CppObject* obj, uint32_t offset) {
         if (!obj || offset == UINT32_MAX) return T();
-        __try {
-            return *(T*)((uintptr_t)obj + offset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            return T();
-        }
+        return *(T*)((uintptr_t)obj + offset);
     }
 
     template<typename T>
     static void write_field(Il2CppObject* obj, uint32_t offset, T value) {
         if (!obj || offset == UINT32_MAX) return;
-        __try {
-            *(T*)((uintptr_t)obj + offset) = value;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        *(T*)((uintptr_t)obj + offset) = value;
     }
 
     // Static field R/W
     template<typename T>
     static T read_static_field(Il2CppClass* klass, const char* field) {
-        uint32_t off = get_static_field_offset("", klass->namespaze, field);
-        if (off == UINT32_MAX) return T();
         void* ptr = get_static_field_ptr("", klass->namespaze, field);
         if (!ptr) return T();
-        __try {
-            return *(T*)ptr;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            return T();
-        }
+        return *(T*)ptr;
     }
 
     template<typename T>
     static void write_static_field(Il2CppClass* klass, const char* field, T value) {
         void* ptr = get_static_field_ptr("", klass->namespaze, field);
         if (!ptr) return;
-        __try {
-            *(T*)ptr = value;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        *(T*)ptr = value;
     }
 
     // Component helpers
@@ -204,12 +212,7 @@ struct Core {
     static Vec3 world_to_screen(Il2CppObject* camera, Vec3 world_pos);
 };
 
-// Shortcuts — both names resolve to Core (runtime auto-detected)
-#define IL2CPP vertice::Core
-#define MONO   vertice::Core
-#define il2cp vertice::Core
-
-// Runtime-conditional helpers
+// Runtime-conditional helpers (use vertice::Core:: directly)
 #define IF_IL2CPP(...) \
     if (vertice::Core::current_runtime == vertice::Runtime::IL2CPP) { __VA_ARGS__; }
 #define IF_MONO(...) \

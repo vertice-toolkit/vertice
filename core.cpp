@@ -485,7 +485,8 @@ void Core::init() {
 }
 
 const char* Core::runtime_name() {
-    switch (current_runtime) {
+    auto rt = current_runtime;
+    switch (rt) {
         case Runtime::IL2CPP: return "IL2CPP";
         case Runtime::Mono:   return "Mono";
         default:              return "Unknown";
@@ -692,11 +693,7 @@ void* Core::find_method_ptr(const char* namespaze, const char* klass, const char
     if (!m) return nullptr;
 
     if (current_runtime == Runtime::IL2CPP) {
-        __try {
-            return *(void**)m; // MethodInfo->methodPointer
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            return nullptr;
-        }
+        return *(void**)m; // MethodInfo->methodPointer
     }
     else if (current_runtime == Runtime::Mono) {
         if (!f_mono_compile_method) return nullptr;
@@ -1102,16 +1099,21 @@ static Il2CppObject* box_value(Il2CppClass* klass, void* data) {
 void Core::transform_set_position(Il2CppObject* transform, float x, float y, float z) {
     if (!transform) return;
     
-    Il2CppClass* vec3_class = find_class("UnityEngine", "Vector3");
-    if (!vec3_class) return;
-    
-    // Box the Vector3 value
     float vec3_data[3] = { x, y, z };
-    Il2CppObject* vec3_obj = box_value(vec3_class, vec3_data);
-    if (!vec3_obj) return;
     
-    void* params[] = { vec3_obj };
-    runtime_invoke("UnityEngine", "Transform", "set_position", 1, transform, params);
+    if (current_runtime == Runtime::Mono) {
+        // Mono runtime_invoke expects raw valuetype data pointer for struct params
+        void* params[] = { (void*)vec3_data };
+        runtime_invoke("UnityEngine", "Transform", "set_position", 1, transform, params);
+    } else {
+        // IL2CPP runtime_invoke expects boxed valuetype objects
+        Il2CppClass* vec3_class = find_class("UnityEngine", "Vector3");
+        if (!vec3_class) return;
+        Il2CppObject* vec3_obj = box_value(vec3_class, vec3_data);
+        if (!vec3_obj) return;
+        void* params[] = { vec3_obj };
+        runtime_invoke("UnityEngine", "Transform", "set_position", 1, transform, params);
+    }
 }
 
 Il2CppObject* Core::transform_get_forward(Il2CppObject* transform) {
