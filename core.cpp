@@ -68,6 +68,8 @@ typedef int (*il2cpp_string_length_t)(Il2CppString* str);
 typedef Il2CppChar* (*il2cpp_string_chars_t)(Il2CppString* str);
 
 typedef Il2CppObject* (*il2cpp_value_box_t)(Il2CppClass* klass, void* data);
+typedef Il2CppType* (*il2cpp_class_get_type_t)(Il2CppClass* klass);
+typedef Il2CppObject* (*il2cpp_type_get_object_t)(Il2CppDomain* domain, Il2CppType* type);
 
 typedef void (*il2cpp_method_get_name_t)(MethodInfo* method, char* buf);
 typedef MethodInfo* (*il2cpp_method_get_declaring_type_t)(MethodInfo* method);
@@ -125,6 +127,8 @@ typedef MonoChar* (*mono_string_chars_t)(MonoString* str);
 typedef char* (*mono_string_to_utf8_t)(MonoString* str);
 
 typedef MonoObject* (*mono_value_box_t)(MonoDomain* domain, MonoClass* klass, void* data);
+typedef MonoType* (*mono_class_get_type_t)(MonoClass* klass);
+typedef MonoObject* (*mono_type_get_object_t)(MonoDomain* domain, MonoType* type);
 
 typedef const char* (*mono_method_get_name_t)(MonoMethod* method);
 typedef int (*mono_method_get_param_count_t)(MonoMethod* method);
@@ -177,6 +181,8 @@ static il2cpp_domain_get_assemblies_t f_domain_get_assemblies = nullptr;
 static il2cpp_thread_attach_t f_thread_attach = nullptr;
 static il2cpp_image_get_class_count_t f_image_get_class_count = nullptr;
 static il2cpp_image_get_class_t f_image_get_class = nullptr;
+static il2cpp_class_get_type_t f_class_get_type = nullptr;
+static il2cpp_type_get_object_t f_type_get_object = nullptr;
 
 // Global Mono function pointers
 static mono_class_from_name_t f_mono_class_from_name = nullptr;
@@ -214,6 +220,8 @@ static mono_method_get_name_t f_mono_method_get_name = nullptr;
 static mono_method_get_param_count_t f_mono_method_get_param_count = nullptr;
 static mono_compile_method_t f_mono_compile_method = nullptr;
 static mono_field_get_parent_t f_mono_field_get_parent = nullptr;
+static mono_class_get_type_t f_mono_class_get_type = nullptr;
+static mono_type_get_object_t f_mono_type_get_object = nullptr;
 
 static HMODULE g_mono_module = nullptr;
 static MonoDomain* g_mono_root_domain = nullptr;
@@ -262,6 +270,8 @@ static bool scan_for_il2cpp() {
         { "il2cpp_image_get_class",             (void**)&f_image_get_class },
         { "il2cpp_class_get_name",              (void**)&f_class_get_name },
         { "il2cpp_class_get_namespace",         (void**)&f_class_get_namespace },
+        { "il2cpp_class_get_type",              (void**)&f_class_get_type },
+        { "il2cpp_type_get_object",             (void**)&f_type_get_object },
     };
 
     int resolved = 0;
@@ -341,6 +351,8 @@ static bool scan_for_mono() {
         { "mono_method_get_param_count",        (void**)&f_mono_method_get_param_count },
         { "mono_compile_method",                (void**)&f_mono_compile_method },
         { "mono_field_get_parent",              (void**)&f_mono_field_get_parent },
+        { "mono_class_get_type",                (void**)&f_mono_class_get_type },
+        { "mono_type_get_object",               (void**)&f_mono_type_get_object },
     };
 
     int resolved = 0;
@@ -1077,6 +1089,48 @@ Il2CppObject* Core::get_transform(Il2CppObject* go) {
 Il2CppObject* Core::get_main_camera() {
     // Camera.get_main static property
     return runtime_invoke("UnityEngine", "Camera", "get_main", 0, nullptr, nullptr);
+}
+
+Il2CppObject* Core::find_object_of_type(Il2CppClass* klass) {
+    if (!klass) return nullptr;
+
+    Il2CppClass* obj_class = find_class("UnityEngine", "Object");
+    if (!obj_class) return nullptr;
+
+    MethodInfo* method = find_method(obj_class, "FindObjectOfType", 1);
+    if (!method) method = find_method(obj_class, "FindObjectOfType", 0);
+    if (!method) { printf("[Core] WARN: Object.FindObjectOfType not found\n"); return nullptr; }
+
+    if (current_runtime == Runtime::IL2CPP) {
+        if (!f_class_get_type || !f_type_get_object || !f_domain_get) return nullptr;
+
+        Il2CppType* type = f_class_get_type(klass);
+        if (!type) return nullptr;
+
+        Il2CppDomain* domain = f_domain_get();
+        Il2CppObject* type_obj = f_type_get_object(domain, type);
+        if (!type_obj) return nullptr;
+
+        void* params[] = { type_obj };
+        return runtime_invoke(method, nullptr, params, nullptr);
+    }
+    else if (current_runtime == Runtime::Mono) {
+        if (!f_mono_class_get_type || !f_mono_type_get_object) return nullptr;
+
+        MonoDomain* domain = f_mono_domain_get ? f_mono_domain_get() : g_mono_root_domain;
+        if (!domain) return nullptr;
+
+        MonoType* type = f_mono_class_get_type((MonoClass*)klass);
+        if (!type) return nullptr;
+
+        Il2CppObject* type_obj = (Il2CppObject*)f_mono_type_get_object(domain, type);
+        if (!type_obj) return nullptr;
+
+        void* params[] = { type_obj };
+        return runtime_invoke(method, nullptr, params, nullptr);
+    }
+
+    return nullptr;
 }
 
 Il2CppObject* Core::transform_get_position(Il2CppObject* transform) {

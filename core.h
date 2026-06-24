@@ -45,6 +45,7 @@ struct Il2CppField;
 struct Il2CppDateTime;
 struct Il2CppThread;
 struct Il2CppAssemblyName;
+struct Il2CppType;
 typedef wchar_t Il2CppChar;
 
 // MethodInfo needs methodPointer at offset 0
@@ -72,6 +73,7 @@ struct MonoImage;
 struct MonoClassField;
 struct MonoDomain;
 struct MonoThread;
+struct MonoType;
 typedef uint16_t MonoChar;
 
 // ===
@@ -183,6 +185,7 @@ struct Core {
     static Il2CppObject* get_game_object(Il2CppObject* component);
     static Il2CppObject* get_transform(Il2CppObject* go);
     static Il2CppObject* get_main_camera();
+    static Il2CppObject* find_object_of_type(Il2CppClass* klass);
     
     // Transform operations
     static Il2CppObject* transform_get_position(Il2CppObject* transform);
