@@ -10,11 +10,30 @@
 
 #define FIELD_ATTRIBUTE_STATIC 0x10
 
+// ===
+// Translation tables — populate these in your game init/offsets file
+// e.g. tClasses[u8"ႣႣႤႡႤႠႦႛႝႨႣ"] = "DiffuseAudio";
+// ===
+translations tClasses;
+translations tFields;
+translations tMethods;
+
+std::string translate(const translations& map, const std::string& value)
+{
+    const auto pos = map.find(value);
+    if (pos == map.end())
+        return value;
+    return pos->second;
+}
+
 namespace vertice {
 
 bool Core::initialized = false;
 Il2CppImage* Core::assembly_csharp = nullptr;
 Il2CppImage* Core::unity_engine = nullptr;
+Il2CppImage* Core::assembly_mscorlib = nullptr;
+
+static std::vector<Il2CppImage*> g_all_images;
 
 // ===
 // Internal IL2CPP Types (from il2cp.h)
@@ -79,6 +98,8 @@ static il2cpp_class_get_fields_t f_class_get_fields = nullptr;
 static il2cpp_class_get_field_t f_class_get_field = nullptr;
 static il2cpp_class_get_methods_t f_class_get_methods = nullptr;
 static il2cpp_class_get_method_from_name_t f_class_get_method_from_name = nullptr;
+static il2cpp_class_get_name_t f_class_get_name = nullptr;
+static il2cpp_class_get_namespace_t f_class_get_namespace = nullptr;
 static il2cpp_string_new_t f_string_new = nullptr;
 static il2cpp_string_length_t f_string_length = nullptr;
 static il2cpp_string_chars_t f_string_chars = nullptr;
@@ -135,6 +156,8 @@ static bool scan_for_il2cpp() {
         { "il2cpp_value_box",                   (void**)&f_value_box },
         { "il2cpp_image_get_class_count",       (void**)&f_image_get_class_count },
         { "il2cpp_image_get_class",             (void**)&f_image_get_class },
+        { "il2cpp_class_get_name",              (void**)&f_class_get_name },
+        { "il2cpp_class_get_namespace",         (void**)&f_class_get_namespace },
     };
 
     int resolved = 0;
@@ -175,8 +198,16 @@ void Core::init() {
                     if (!assemblies[i]) continue;
                     Il2CppImage* img = (Il2CppImage*)f_assembly_get_image(assemblies[i]);
                     if (!img) continue;
-                    // Store known assemblies by heuristic
                     printf("[Core] Assembly: %p\n", img);
+                    g_all_images.push_back(img);
+                    if (img->name) {
+                        if (strcmp(img->name, "Assembly-CSharp.dll") == 0 || strcmp(img->name, "Assembly-CSharp") == 0)
+                            assembly_csharp = img;
+                        else if (strstr(img->name, "UnityEngine"))
+                            unity_engine = img;
+                        else if (strcmp(img->name, "mscorlib.dll") == 0 || strcmp(img->name, "mscorlib") == 0)
+                            assembly_mscorlib = img;
+                    }
                     if (!assembly_csharp) assembly_csharp = img;
                 }
             }
@@ -192,12 +223,38 @@ void Core::shutdown() {
     initialized = false;
     assembly_csharp = nullptr;
     unity_engine = nullptr;
+    assembly_mscorlib = nullptr;
+    g_all_images.clear();
     printf("[Vertice] IL2CPP core shutdown\n");
 }
 
 Il2CppClass* Core::find_class(const char* namespaze, const char* name) {
     if (!f_class_from_name) return nullptr;
-    return f_class_from_name(assembly_csharp, namespaze, name);
+
+    // Try direct lookup on all known images
+    for (auto img : g_all_images) {
+        Il2CppClass* klass = f_class_from_name(img, namespaze, name);
+        if (klass) return klass;
+    }
+
+    // Fallback: iterate all classes in all images using translate
+    if (!f_class_get_name || !f_class_get_namespace || !f_image_get_class_count || !f_image_get_class)
+        return nullptr;
+
+    for (auto img : g_all_images) {
+        int count = f_image_get_class_count(img);
+        for (int i = 0; i < count; i++) {
+            Il2CppClass* c = f_image_get_class(img, i);
+            if (!c) continue;
+            const char* ns = f_class_get_namespace(c);
+            const char* cn = f_class_get_name(c);
+            if (!ns || !cn) continue;
+            if (strcmp(namespaze, ns) != 0) continue;
+            if (strcmp(name, translate(tClasses, cn).c_str()) == 0)
+                return c;
+        }
+    }
+    return nullptr;
 }
 
 Il2CppClass* Core::find_class_unsafe(const char* namespaze, const char* name) {
@@ -206,7 +263,22 @@ Il2CppClass* Core::find_class_unsafe(const char* namespaze, const char* name) {
 
 MethodInfo* Core::find_method(Il2CppClass* klass, const char* name, int args) {
     if (!f_class_get_method_from_name || !klass) return nullptr;
-    return f_class_get_method_from_name(klass, name, args);
+
+    MethodInfo* method = f_class_get_method_from_name(klass, name, args);
+    if (method) return method;
+
+    if (!f_class_get_methods) return nullptr;
+
+    void* iter = nullptr;
+    MethodInfo* m = f_class_get_methods(klass, &iter);
+    while (m) {
+        if (m->name && strcmp(name, translate(tMethods, m->name).c_str()) == 0) {
+            if (args < 0 || m->parameters_count == args)
+                return m;
+        }
+        m = f_class_get_methods(klass, &iter);
+    }
+    return nullptr;
 }
 
 MethodInfo* Core::find_method(const char* namespaze, const char* klass, const char* name, int args) {
@@ -227,7 +299,20 @@ void* Core::find_method_ptr(const char* namespaze, const char* klass, const char
 
 FieldInfo* Core::find_field(Il2CppClass* klass, const char* name) {
     if (!f_class_get_field || !klass) return nullptr;
-    return f_class_get_field(klass, name);
+
+    FieldInfo* field = f_class_get_field(klass, name);
+    if (field) return field;
+
+    if (!f_class_get_fields) return nullptr;
+
+    void* iter = nullptr;
+    FieldInfo* f = f_class_get_fields(klass, &iter);
+    while (f) {
+        if (f->name && strcmp(name, translate(tFields, f->name).c_str()) == 0)
+            return f;
+        f = f_class_get_fields(klass, &iter);
+    }
+    return nullptr;
 }
 
 FieldInfo* Core::find_field(const char* namespaze, const char* klass, const char* name) {
@@ -249,7 +334,7 @@ uint32_t Core::get_static_field_offset(const char* namespaze, const char* klass,
     void* iter = nullptr;
     FieldInfo* f = f_class_get_fields(k, &iter);
     while (f) {
-        if (strcmp(f->name, field) == 0 && (f->flags & FIELD_ATTRIBUTE_STATIC)) {
+        if (strcmp(field, translate(tFields, f->name).c_str()) == 0 && (f->flags & FIELD_ATTRIBUTE_STATIC)) {
             return f->offset;
         }
         f = f_class_get_fields(k, &iter);

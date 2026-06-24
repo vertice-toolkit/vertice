@@ -46,3 +46,6 @@ Desktop.ini
 *.exp
 *.pdb
 *.ilk
+
+# personal files
+docsprogr/

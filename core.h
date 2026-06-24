@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <unordered_map>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -29,6 +30,16 @@ struct Il2CppThread;
 struct Il2CppAssemblyName;
 typedef wchar_t Il2CppChar;
 
+// ===
+// Translate API — map obfuscated names to readable names
+// ===
+using translations = std::unordered_map<std::string, std::string>;
+std::string translate(const translations& map, const std::string& value);
+
+extern translations tClasses;
+extern translations tFields;
+extern translations tMethods;
+
 namespace vertice {
 
 // ===
@@ -39,6 +50,7 @@ struct Core {
     static bool initialized;
     static Il2CppImage* assembly_csharp;
     static Il2CppImage* unity_engine;
+    static Il2CppImage* assembly_mscorlib;
 
     static void init();
     static void shutdown();

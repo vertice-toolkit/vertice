@@ -97,6 +97,18 @@
     vertice::Core::get_field_offset("", #klass, #field)
 
 // ===
+// Translate Macros — map obfuscated names to readable names
+// ===
+
+// Override a translation table in your game offsets file.
+// Example:
+//   const translations tClasses = {
+//       TRANSLATE(u8"ႣႣႤႡႤႠႦႛႝႨႣ", "DiffuseAudio"),
+//   };
+#define TRANSLATE(obfuscated, readable) \
+    { obfuscated, readable }
+
+// ===
 // Version Info
 // ===
 
