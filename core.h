@@ -9,6 +9,14 @@
 #include <Windows.h>
 #endif
 
+// ===
+// Runtime Detection
+// ===
+enum class Runtime : uint8_t { Unknown, IL2CPP, Mono };
+
+// ===
+// IL2CPP Forward Declarations
+// ===
 struct Il2CppClass;
 struct MethodInfo;
 struct FieldInfo {
@@ -25,10 +33,24 @@ struct Il2CppAssembly;
 struct Il2CppImage;
 struct Il2CppField;
 struct Il2CppDateTime;
-struct Il2CppDomain;
 struct Il2CppThread;
 struct Il2CppAssemblyName;
 typedef wchar_t Il2CppChar;
+
+// ===
+// Mono Forward Declarations (opaque — all access via getter functions)
+// ===
+struct MonoClass;
+struct MonoMethod;
+struct MonoObject;
+struct MonoString;
+struct MonoException;
+struct MonoAssembly;
+struct MonoImage;
+struct MonoClassField;
+struct MonoDomain;
+struct MonoThread;
+typedef uint16_t MonoChar;
 
 // ===
 // Translate API — map obfuscated names to readable names
@@ -48,12 +70,21 @@ namespace vertice {
 
 struct Core {
     static bool initialized;
+    static Runtime current_runtime;
+
+    // IL2CPP image references
     static Il2CppImage* assembly_csharp;
     static Il2CppImage* unity_engine;
     static Il2CppImage* assembly_mscorlib;
 
+    // Mono image references
+    static MonoImage* mono_assembly_csharp;
+    static MonoImage* mono_unity_engine;
+    static MonoImage* mono_mscorlib;
+
     static void init();
     static void shutdown();
+    static const char* runtime_name();
 
     // Class resolution
     static Il2CppClass* find_class(const char* namespaze, const char* name);
@@ -173,8 +204,15 @@ struct Core {
     static Vec3 world_to_screen(Il2CppObject* camera, Vec3 world_pos);
 };
 
-// Shortcuts
+// Shortcuts — both names resolve to Core (runtime auto-detected)
 #define IL2CPP vertice::Core
+#define MONO   vertice::Core
 #define il2cp vertice::Core
+
+// Runtime-conditional helpers
+#define IF_IL2CPP(...) \
+    if (vertice::Core::current_runtime == vertice::Runtime::IL2CPP) { __VA_ARGS__; }
+#define IF_MONO(...) \
+    if (vertice::Core::current_runtime == vertice::Runtime::Mono) { __VA_ARGS__; }
 
 } // namespace vertice

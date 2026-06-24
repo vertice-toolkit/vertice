@@ -2,11 +2,11 @@
 
 // ===
 // VERTICE
-// Reusable IL2CPP Unity Cheat Framework
+// Reusable Unity Modding Framework (IL2CPP + Mono)
 // ===
 // 
 // This framework provides:
-// - Core IL2CPP API wrappers
+// - Core IL2CPP + Mono API wrappers (auto-detected)
 // - MinHook integration
 // - Feature toggle system
 // - ESP rendering utilities  

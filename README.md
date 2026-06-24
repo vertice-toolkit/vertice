@@ -1,12 +1,12 @@
 # Vertice Framework
 
-Reusable C++ framework for Unity IL2CPP game modding (and in future Unity Mono).
+Reusable C++ framework for Unity modding — supports **IL2CPP** and **Mono** runtimes (auto-detected).
 
 ## What's inside
 
 | File | Purpose |
 |------|---------|
-| `core.h/cpp` | IL2CPP runtime wrappers (classes, methods, fields) |
+| `core.h/cpp` | IL2CPP + Mono runtime wrappers (classes, methods, fields) |
 | `hooks.h/cpp` | MinHook-based hooking + feature toggle system |
 | `esp.h` | World-to-screen + ESP rendering helpers |
 | `vertice.h` | Main include — pulls in everything + convenience macros |
@@ -67,9 +67,20 @@ add_library(my_cheat SHARED
 
 **Visual Studio** — add `vertice/*.cpp` to your project and add `vertice/` to the include paths.
 
-## Future
+## Runtime Detection
 
-Unity **Mono** modding support is planned.
+Vertice auto-detects the Unity runtime at startup:
+
+1. **IL2CPP** — looks for `GameAssembly.dll` exports (`il2cpp_*`)
+2. **Mono** — falls back to `mono-2.0-bdwgc.dll` / `mono.dll` exports (`mono_*`)
+
+Use `vertice::Core::runtime_name()` or `Core::current_runtime` to check which runtime was detected.
+
+## Limitations
+
+- **Mono hooks** — `INSTALL_HOOK` uses `mono_compile_method()` to resolve JIT-compiled method pointers; some methods may not be compilable until called at least once.
+- **Static field pointers** — `get_static_field_ptr()` is IL2CPP-only; use `field_static_get_value()` for Mono.
+- **read_static_field / write_static_field templates** — these access `klass->namespaze` (IL2CPP-specific); for Mono, use the explicit `get_static_field_offset(namespace, class, field)` pattern instead.
 
 ## License
 
